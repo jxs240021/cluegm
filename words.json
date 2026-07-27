@@ -106,7 +106,7 @@
       "ORCHARD", "RAINFOREST", "SAFARI PARK", "SPACE STATION", "TEMPLE", "TORNADO ALLEY", "WIND FARM", "YACHT", "YELLOWSTONE", "ZULU VILLAGE"
     ]
   },
-  "Occupations & Roles": [
+  "Occupations & Roles": {
     "EASY": [
       "ASTRONAUT", "CHEF", "CLOWN", "COP", "DOCTOR", "FARMER", "FIREFIGHTER", "KING", "NURSE", "PILOT",
       "PIRATE", "POLICE OFFICER", "QUEEN", "TEACHER", "WIZARD"
