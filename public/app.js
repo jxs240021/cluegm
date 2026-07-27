@@ -2,46 +2,46 @@ const socket = io();
 let currentRoomCode = '';
 let myPlayerName = '';
 
-// Pre-fill Room Code if opened via Share Link
+// Pre-fill room code from URL parameters
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room');
   if (roomParam) {
-    document.getElementById('room-input').value = roomParam.toUpperCase();
+    document.getElementById('room-input').value = roomParam.toUpperCase().trim();
   }
 });
 
-// UI Event Listeners
+// UI Click Handlers
 document.getElementById('create-btn').onclick = () => {
   myPlayerName = document.getElementById('player-name').value.trim();
-  if (!myPlayerName) return alert('Enter your name!');
+  if (!myPlayerName) return alert('Please enter your name first!');
   socket.emit('create-room', { playerName: myPlayerName });
 };
 
 document.getElementById('join-btn').onclick = () => {
   myPlayerName = document.getElementById('player-name').value.trim();
   let roomCode = document.getElementById('room-input').value.trim();
-  if (!myPlayerName || !roomCode) return alert('Enter name and room code!');
+  if (!myPlayerName || !roomCode) return alert('Please enter your name and room code!');
   socket.emit('join-room', { roomCode, playerName: myPlayerName });
 };
 
 document.getElementById('start-game-btn').onclick = () => {
-  const confirmStart = confirm("Are all players in the room?\n\nOnce started, new players cannot join.");
-  if (confirmStart) {
+  if (confirm("Are all players in the room? Game will lock to new joins once started.")) {
     socket.emit('start-game', { roomCode: currentRoomCode });
   }
 };
 
 document.getElementById('copy-link-btn').onclick = () => {
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomCode}`;
-  navigator.clipboard.writeText(shareUrl).then(() => alert('Share link copied!'));
+  navigator.clipboard.writeText(shareUrl).then(() => alert('Share link copied to clipboard!'));
 };
 
 document.getElementById('submit-clue-btn').onclick = () => {
-  const clueText = document.getElementById('clue-input').value.trim();
+  const clueInput = document.getElementById('clue-input');
+  const clueText = clueInput.value.trim();
   if (!clueText) return;
   socket.emit('submit-clue', { roomCode: currentRoomCode, clueText });
-  document.getElementById('clue-input').value = '';
+  clueInput.value = '';
 };
 
 document.getElementById('approve-clues-btn').onclick = () => {
@@ -49,30 +49,20 @@ document.getElementById('approve-clues-btn').onclick = () => {
 };
 
 document.getElementById('submit-guess-btn').onclick = () => {
-  const guessText = document.getElementById('guess-input').value.trim();
+  const guessInput = document.getElementById('guess-input');
+  const guessText = guessInput.value.trim();
   if (!guessText) return;
   socket.emit('submit-guess', { roomCode: currentRoomCode, guessText });
+  guessInput.value = '';
 };
 
 document.getElementById('next-round-btn').onclick = () => {
   socket.emit('next-round', { roomCode: currentRoomCode });
 };
 
-// Socket Event Listeners
-socket.on('room-joined', ({ roomCode, isHost, room }) => {
-  currentRoomCode = roomCode;
-  document.getElementById('join-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display = 'block';
-  document.getElementById('room-code-display').textContent = roomCode;
-  document.getElementById('player-name-badge').textContent = `Playing as: ${myPlayerName}`;
-  
-  if (isHost) document.getElementById('start-game-btn').style.display = 'inline-block';
-});
-
-
+// Socket Events
 socket.on('error-msg', (msg) => {
   alert(msg);
-  // Focus back on the name field so the user can quickly type a new name
   const nameInput = document.getElementById('player-name');
   if (nameInput) {
     nameInput.focus();
@@ -80,32 +70,63 @@ socket.on('error-msg', (msg) => {
   }
 });
 
-// socket.on('error-msg', (msg) => alert(msg));
-// 
-// socket.on('update-room', (room) => {
-//   renderRoom(room);
-// });
+socket.on('room-joined', ({ roomCode, isHost, room }) => {
+  currentRoomCode = roomCode;
+  document.getElementById('join-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  document.getElementById('room-code-display').textContent = roomCode;
+  document.getElementById('player-name-badge').textContent = `Playing as: ${myPlayerName}`;
+});
+
+socket.on('update-room', (room) => {
+  renderRoom(room);
+});
 
 function renderRoom(room) {
   const me = socket.id;
   const guesser = room.players[room.guesserIndex];
   const moderator = room.players[room.moderatorIndex];
 
-  // Role Text
-  let myRole = "Clue Provider";
-  if (me === guesser.id) myRole = "Solution Guesser";
-  if (me === moderator.id) myRole = "Moderator & Clue Provider";
-  document.getElementById('role-display').textContent = `Your Role: ${myRole}`;
+  // 1. LOBBY VS IN-GAME DISPLAY
+  const lobbyContainer = document.getElementById('lobby-list-container');
+  const scoreboardContainer = document.getElementById('scoreboard-container');
+  const startBtn = document.getElementById('start-game-btn');
 
-  // Hide all phase panels by default
+  if (room.state === 'lobby') {
+    lobbyContainer.style.display = 'block';
+    scoreboardContainer.style.display = 'none';
+
+    // Render connected player list
+    const lobbyUl = document.getElementById('lobby-player-list');
+    lobbyUl.innerHTML = room.players
+      .map(p => `<li>👤 ${p.name} ${p.id === room.hostId ? '<span style="color:#d69e2e;">👑 (Host)</span>' : ''}</li>`)
+      .join('');
+
+    document.getElementById('role-display').textContent = 'Waiting for Host to start...';
+
+    // Host controls start button
+    if (me === room.hostId) {
+      startBtn.style.display = 'inline-block';
+    } else {
+      startBtn.style.display = 'none';
+    }
+  } else {
+    lobbyContainer.style.display = 'none';
+    scoreboardContainer.style.display = 'block';
+    startBtn.style.display = 'none';
+
+    // Role Badge Text
+    let myRole = "Clue Provider";
+    if (me === guesser?.id) myRole = "Solution Guesser";
+    if (me === moderator?.id) myRole = "Moderator & Clue Provider";
+    document.getElementById('role-display').textContent = `Your Role: ${myRole}`;
+  }
+
+  // Hide all gameplay panels
   document.getElementById('submitting-clues-view').style.display = 'none';
   document.getElementById('reviewing-clues-view').style.display = 'none';
   document.getElementById('guessing-view').style.display = 'none';
   document.getElementById('round-over-view').style.display = 'none';
-
-  if (room.state !== 'lobby') {
-    document.getElementById('start-game-btn').style.display = 'none';
-  }
 
   // Phase 1: Submitting Clues
   if (room.state === 'submitting-clues') {
@@ -119,7 +140,7 @@ function renderRoom(room) {
       document.getElementById('target-word-display').textContent = `Target Word: ${room.targetWord}`;
       if (room.clues[me]) {
         document.getElementById('clue-input-box').style.display = 'none';
-        document.getElementById('waiting-clues-msg').textContent = "Clue submitted! Waiting for others...";
+        document.getElementById('waiting-clues-msg').textContent = `Clue submitted: "${room.clues[me].clue}". Waiting for others...`;
       } else {
         document.getElementById('clue-input-box').style.display = 'block';
         document.getElementById('waiting-clues-msg').textContent = "";
@@ -135,6 +156,7 @@ function renderRoom(room) {
 
     const isModerator = me === moderator.id;
     document.getElementById('approve-clues-btn').style.display = isModerator ? 'inline-block' : 'none';
+    document.getElementById('mod-instruction-text').style.display = isModerator ? 'block' : 'none';
 
     Object.values(room.clues).forEach(item => {
       const el = document.createElement('div');
@@ -155,13 +177,17 @@ function renderRoom(room) {
     const listEl = document.getElementById('guesser-clue-list');
     listEl.innerHTML = '';
 
-    // Filter valid clues only
     const validClues = Object.values(room.clues).filter(c => c.valid);
-    validClues.forEach(item => {
-      const li = document.createElement('li');
-      li.textContent = `💡 ${item.clue}`;
-      listEl.appendChild(li);
-    });
+    if (validClues.length === 0) {
+      listEl.innerHTML = '<li style="color:red;">All clues were marked invalid by the moderator!</li>';
+    } else {
+      validClues.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'clue-item';
+        li.textContent = `💡 ${item.clue}`;
+        listEl.appendChild(li);
+      });
+    }
 
     if (me === guesser.id) {
       document.getElementById('guesser-input-box').style.display = 'block';
@@ -174,16 +200,18 @@ function renderRoom(room) {
   if (room.state === 'round-over') {
     document.getElementById('round-over-view').style.display = 'block';
     const isCorrect = room.guess === room.targetWord;
-    document.getElementById('result-status').textContent = isCorrect ? "🎉 Correct Answer!" : "❌ Wrong Guess!";
+    document.getElementById('result-status').textContent = isCorrect ? "🎉 Correct Answer!" : "❌ Incorrect!";
     document.getElementById('reveal-target').textContent = room.targetWord;
     document.getElementById('reveal-guess').textContent = room.guess || "(No Guess)";
   }
 
-  // Render Scoreboard
+  // Update Scoreboard
   const scoreDiv = document.getElementById('scoreboard');
-  scoreDiv.innerHTML = room.players
-    .slice()
-    .sort((a, b) => b.score - a.score)
-    .map(p => `<p>${p.name}: <strong>${p.score} pts</strong></p>`)
-    .join('');
+  if (scoreDiv) {
+    scoreDiv.innerHTML = room.players
+      .slice()
+      .sort((a, b) => b.score - a.score)
+      .map(p => `<p>${p.name}: <strong>${p.score} pts</strong></p>`)
+      .join('');
+  }
 }
