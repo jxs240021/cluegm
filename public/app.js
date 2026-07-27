@@ -112,14 +112,14 @@ function renderRoom(room) {
     document.getElementById('role-display').textContent = `Your Role: ${myRole}`;
   }
 
-  // Hide all panels
+  // Hide all views
   document.getElementById('selecting-category-view').style.display = 'none';
   document.getElementById('submitting-clues-view').style.display = 'none';
   document.getElementById('reviewing-clues-view').style.display = 'none';
   document.getElementById('guessing-view').style.display = 'none';
   document.getElementById('round-over-view').style.display = 'none';
 
-  // Phase 0: Category Selection
+  // Phase 0: Selecting Category
   if (room.state === 'selecting-category') {
     document.getElementById('selecting-category-view').style.display = 'block';
     const container = document.getElementById('category-buttons-container');
@@ -128,26 +128,35 @@ function renderRoom(room) {
     const isModerator = me === moderator?.id;
 
     if (isModerator) {
-      document.getElementById('category-picker-title').textContent = "Pick a Category for this Round!";
-      document.getElementById('category-instruction-text').textContent = "As Moderator, choose one of the 3 randomly generated options:";
+      document.getElementById('category-picker-title').textContent = "Pick a Category & Difficulty!";
+      document.getElementById('category-instruction-text').textContent = "Select 1 of the 4 random options below:";
       
-      room.categoryChoices.forEach(cat => {
+      room.categoryChoices.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'btn-category';
-        btn.textContent = `📁 ${cat}`;
-        btn.onclick = () => socket.emit('select-category', { roomCode: currentRoomCode, category: cat });
+        
+        let badgeColor = '#38a169';
+        if (opt.difficulty === 'Medium') badgeColor = '#dd6b20';
+        if (opt.difficulty === 'Hard') badgeColor = '#e53e3e';
+
+        btn.innerHTML = `📁 ${opt.category} <span style="background:${badgeColor}; color:white; padding:2px 8px; border-radius:10px; font-size:12px; margin-left:8px;">${opt.difficulty}</span>`;
+        btn.onclick = () => socket.emit('select-category', { 
+          roomCode: currentRoomCode, 
+          category: opt.category, 
+          difficulty: opt.difficulty 
+        });
         container.appendChild(btn);
       });
     } else {
       document.getElementById('category-picker-title').textContent = "Moderator is Choosing Category...";
-      document.getElementById('category-instruction-text').textContent = `${moderator?.name || 'Moderator'} is picking between 3 category choices.`;
+      document.getElementById('category-instruction-text').textContent = `${moderator?.name || 'Moderator'} is choosing between 4 options.`;
     }
   }
 
   // Phase 1: Submitting Clues
   if (room.state === 'submitting-clues') {
     document.getElementById('submitting-clues-view').style.display = 'block';
-    document.getElementById('category-badge-display').textContent = `Category: ${room.selectedCategory}`;
+    document.getElementById('category-badge-display').textContent = `Category: ${room.selectedCategory} (${room.selectedDifficulty})`;
 
     if (me === guesser.id) {
       document.getElementById('target-word-display').textContent = "??? (You are guessing)";
