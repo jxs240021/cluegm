@@ -104,7 +104,6 @@ function renderRoom(room) {
 
     document.getElementById('role-display').textContent = 'Waiting for Host to start...';
 
-    // Host controls start button
     if (me === room.hostId) {
       startBtn.style.display = 'inline-block';
     } else {
@@ -139,6 +138,7 @@ function renderRoom(room) {
     } else {
       document.getElementById('target-word-display').textContent = `Target Word: ${room.targetWord}`;
       if (room.clues[me]) {
+        // Players only see their own input after submitting
         document.getElementById('clue-input-box').style.display = 'none';
         document.getElementById('waiting-clues-msg').textContent = `Clue submitted: "${room.clues[me].clue}". Waiting for others...`;
       } else {
@@ -154,21 +154,33 @@ function renderRoom(room) {
     const listDiv = document.getElementById('moderator-clue-list');
     listDiv.innerHTML = '';
 
+    const isGuesser = me === guesser.id;
     const isModerator = me === moderator.id;
-    document.getElementById('approve-clues-btn').style.display = isModerator ? 'inline-block' : 'none';
-    document.getElementById('mod-instruction-text').style.display = isModerator ? 'block' : 'none';
 
-    Object.values(room.clues).forEach(item => {
-      const el = document.createElement('div');
-      el.className = `clue-item ${item.valid ? '' : 'invalid'}`;
-      el.textContent = `${item.playerName}: ${item.clue}`;
-      
-      if (isModerator) {
-        el.style.cursor = 'pointer';
-        el.onclick = () => socket.emit('toggle-clue-validity', { roomCode: currentRoomCode, targetPlayerId: item.playerId });
-      }
-      listDiv.appendChild(el);
-    });
+    if (isGuesser) {
+      // SOLUTION GUESSER: Blocked from seeing options during review
+      document.getElementById('mod-instruction-text').textContent = "The Moderator is currently reviewing the submitted clues...";
+      document.getElementById('approve-clues-btn').style.display = 'none';
+      listDiv.innerHTML = '<p style="font-style: italic; color: #718096;">Clues hidden until approved by Moderator...</p>';
+    } else {
+      // OTHER PLAYERS & MODERATOR: Can see submitted options
+      document.getElementById('approve-clues-btn').style.display = isModerator ? 'inline-block' : 'none';
+      document.getElementById('mod-instruction-text').textContent = isModerator 
+        ? "Click any clue to toggle it Valid / Invalid before sending."
+        : "Moderator is reviewing the clues below:";
+
+      Object.values(room.clues).forEach(item => {
+        const el = document.createElement('div');
+        el.className = `clue-item ${item.valid ? '' : 'invalid'}`;
+        el.textContent = `${item.playerName}: ${item.clue}`;
+        
+        if (isModerator) {
+          el.style.cursor = 'pointer';
+          el.onclick = () => socket.emit('toggle-clue-validity', { roomCode: currentRoomCode, targetPlayerId: item.playerId });
+        }
+        listDiv.appendChild(el);
+      });
+    }
   }
 
   // Phase 3: Guessing Phase
