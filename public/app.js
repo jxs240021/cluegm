@@ -104,6 +104,7 @@ function renderRoom(room) {
 
     document.getElementById('role-display').textContent = 'Waiting for Host to start...';
 
+    // Ensure start button visibility strictly matches host socket ID
     if (me === room.hostId) {
       startBtn.style.display = 'inline-block';
     } else {
@@ -138,7 +139,6 @@ function renderRoom(room) {
     } else {
       document.getElementById('target-word-display').textContent = `Target Word: ${room.targetWord}`;
       if (room.clues[me]) {
-        // Players only see their own input after submitting
         document.getElementById('clue-input-box').style.display = 'none';
         document.getElementById('waiting-clues-msg').textContent = `Clue submitted: "${room.clues[me].clue}". Waiting for others...`;
       } else {
@@ -158,12 +158,10 @@ function renderRoom(room) {
     const isModerator = me === moderator.id;
 
     if (isGuesser) {
-      // SOLUTION GUESSER: Blocked from seeing options during review
       document.getElementById('mod-instruction-text').textContent = "The Moderator is currently reviewing the submitted clues...";
       document.getElementById('approve-clues-btn').style.display = 'none';
       listDiv.innerHTML = '<p style="font-style: italic; color: #718096;">Clues hidden until approved by Moderator...</p>';
     } else {
-      // OTHER PLAYERS & MODERATOR: Can see submitted options
       document.getElementById('approve-clues-btn').style.display = isModerator ? 'inline-block' : 'none';
       document.getElementById('mod-instruction-text').textContent = isModerator 
         ? "Click any clue to toggle it Valid / Invalid before sending."
