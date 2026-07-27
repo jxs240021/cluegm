@@ -49,7 +49,7 @@ io.on('connection', (socket) => {
     socket.emit('room-joined', { roomCode, isHost: true, room: serializeRoom(rooms[roomCode]) });
   });
 
-  // Join Room
+// Join Room with Duplicate Name Validation
   socket.on('join-room', ({ roomCode, playerName }) => {
     if (!roomCode) return;
     roomCode = roomCode.toUpperCase();
@@ -58,11 +58,40 @@ io.on('connection', (socket) => {
     if (!room) return socket.emit('error-msg', 'Room not found!');
     if (room.state !== 'lobby') return socket.emit('error-msg', 'Game already in progress!');
 
-    room.players.push({ id: socket.id, name: playerName, score: 0 });
+    // Clean and normalize the incoming name
+    let cleanName = playerName.trim();
+
+    // Check if the name is already taken in this room (case-insensitive)
+    let isNameTaken = room.players.some(
+      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+
+    if (isNameTaken) {
+      return socket.emit('error-msg', `The name "${cleanName}" is already taken in this room. Please choose a different name!`);
+    }
+
+    // Name is available — add the player
+    room.players.push({ id: socket.id, name: cleanName, score: 0 });
     socket.join(roomCode);
     io.to(roomCode).emit('update-room', serializeRoom(room));
     socket.emit('room-joined', { roomCode, isHost: false, room: serializeRoom(room) });
-  });
+  });  
+
+  
+  // Join Room
+  // socket.on('join-room', ({ roomCode, playerName }) => {
+  //   if (!roomCode) return;
+  //   roomCode = roomCode.toUpperCase();
+  //   let room = rooms[roomCode];
+// 
+ //    if (!room) return socket.emit('error-msg', 'Room not found!');
+ //    if (room.state !== 'lobby') return socket.emit('error-msg', 'Game already in progress!');
+// 
+   //  room.players.push({ id: socket.id, name: playerName, score: 0 });
+   //  socket.join(roomCode);
+   //  io.to(roomCode).emit('update-room', serializeRoom(room));
+   //  socket.emit('room-joined', { roomCode, isHost: false, room: serializeRoom(room) });
+  // });
 
   // Start Game
   socket.on('start-game', ({ roomCode }) => {
