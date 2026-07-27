@@ -3,90 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Co-Op Clue Guesser</title>
+  <title>Just One - Party Game</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 600px; margin: 20px auto; padding: 15px; text-align: center; background-color: #f7fafc; color: #2d3748; }
-    .card { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 15px; }
-    input[type="text"] { padding: 10px; font-size: 16px; border: 1px solid #cbd5e0; border-radius: 6px; width: 70%; max-width: 280px; margin-bottom: 10px; }
-    button { padding: 10px 18px; font-size: 15px; font-weight: bold; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; margin: 5px; }
-    button:hover { background-color: #2b6cb0; }
-    .role-badge { font-size: 1.1em; font-weight: bold; color: #2b6cb0; background: #ebf8ff; padding: 8px; border-radius: 6px; display: inline-block; margin-bottom: 10px; }
-    .clue-item { margin: 8px 0; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; font-size: 1.1em; }
-    .invalid { text-decoration: line-through; color: #e53e3e; opacity: 0.6; background: #fff5f5; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; color: #2d3748; }
+    .card { background: white; border-radius: 12px; padding: 24px; max-width: 500px; margin: 0 auto 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    h1, h2, h3 { text-align: center; color: #1a202c; }
+    input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #cbd5e0; box-sizing: border-box; font-size: 16px; }
+    button { background: #3182ce; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #2b6cb0; }
+    .btn-category { background: #2b6cb0; margin-bottom: 10px; }
+    .btn-category:hover { background: #2c5282; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 14px; background: #e2e8f0; }
+    .clue-item { background: #edf2f7; padding: 10px; margin: 6px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .clue-item.invalid { text-decoration: line-through; opacity: 0.5; background: #fed7d7; }
     ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; }
   </style>
 </head>
 <body>
 
-  <h1>Co-Op Clue Guesser</h1>
-  <p id="player-name-badge" style="font-weight: bold; color: #4a5568;"></p>
-
   <!-- Join / Create Screen -->
   <div id="join-screen" class="card">
-    <input type="text" id="player-name" placeholder="Your Name"><br>
+    <h1>🎯 Just One</h1>
+    <input type="text" id="player-name" placeholder="Enter Your Name">
     <button id="create-btn">Create New Room</button>
-    <br><br>
-    <input type="text" id="room-input" placeholder="Room Code">
+    <div style="text-align: center; margin: 12px 0;">— OR —</div>
+    <input type="text" id="room-input" placeholder="Enter 4-Letter Room Code">
     <button id="join-btn">Join Room</button>
   </div>
 
   <!-- Main Game Screen -->
   <div id="game-screen" class="card" style="display: none;">
-    <h3>Room Code: <span id="room-code-display" style="color:#2b6cb0;"></span></h3>
-    <button id="copy-link-btn">📋 Copy Share Link</button>
-    <br><br>
-    <div id="role-display" class="role-badge"></div>
-    <hr style="border:0; border-top: 1px solid #eee; margin: 15px 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="badge" id="player-name-badge"></span>
+      <span class="badge" style="background:#feebc8; color:#9c4221;" id="room-code-display"></span>
+    </div>
+    <h3 id="role-display" style="color: #4a5568; margin-top: 15px;"></h3>
+    <button id="copy-link-btn" style="background: #4a5568; margin-bottom: 15px;">📋 Copy Invite Link</button>
+
+    <!-- Lobby View -->
+    <div id="lobby-list-container">
+      <h3>Connected Players:</h3>
+      <ul id="lobby-player-list"></ul>
+      <button id="start-game-btn" style="display: none; background: #38a169;">🚀 Start Game</button>
+    </div>
+
+    <!-- Phase 0: Selecting Category -->
+    <div id="selecting-category-view" style="display: none;">
+      <h2 id="category-picker-title">Selecting Category...</h2>
+      <p id="category-instruction-text" style="text-align: center; color: #718096;"></p>
+      <div id="category-buttons-container"></div>
+    </div>
 
     <!-- Phase 1: Submitting Clues -->
     <div id="submitting-clues-view" style="display: none;">
-      <h2 id="target-word-display" style="color: #2f855a;"></h2>
+      <p style="text-align: center; font-size: 14px; color: #718096;" id="category-badge-display"></p>
+      <h2 id="target-word-display" style="letter-spacing: 2px;"></h2>
       <div id="clue-input-box">
-        <input type="text" id="clue-input" placeholder="Enter 1-word clue">
+        <input type="text" id="clue-input" placeholder="Type a ONE-WORD clue">
         <button id="submit-clue-btn">Submit Clue</button>
       </div>
-      <p id="waiting-clues-msg" style="font-style: italic; color: #718096;"></p>
+      <p id="waiting-clues-msg" style="text-align: center; font-style: italic; color: #718096;"></p>
     </div>
 
-    <!-- Phase 2: Moderator Review -->
+    <!-- Phase 2: Reviewing Clues -->
     <div id="reviewing-clues-view" style="display: none;">
-      <h3>Moderator Review Phase</h3>
-      <p id="mod-instruction-text" style="font-size:0.9em; color:#4a5568;">Click any clue to toggle it Valid / Invalid before sending.</p>
+      <h2>Moderation Phase</h2>
+      <p id="mod-instruction-text" style="text-align: center; color: #718096;"></p>
       <div id="moderator-clue-list"></div>
-      <br>
-      <button id="approve-clues-btn" style="display: none; background-color: #38a169;">Send Approved Clues to Guesser</button>
+      <button id="approve-clues-btn" style="background: #38a169; display: none;">✅ Approve & Show Guesser</button>
     </div>
 
-    <!-- Phase 3: Guesser Phase -->
+    <!-- Phase 3: Guessing Phase -->
     <div id="guessing-view" style="display: none;">
+      <h2>Guesser Phase</h2>
       <h3>Approved Clues:</h3>
       <ul id="guesser-clue-list"></ul>
       <div id="guesser-input-box">
-        <input type="text" id="guess-input" placeholder="Enter final word guess">
-        <button id="submit-guess-btn" style="background-color: #38a169;">Submit Final Guess</button>
+        <input type="text" id="guess-input" placeholder="Type your guess">
+        <button id="submit-guess-btn">Submit Final Guess</button>
       </div>
     </div>
 
     <!-- Phase 4: Round Over -->
-    <div id="round-over-view" style="display: none;">
+    <div id="round-over-view" style="display: none; text-align: center;">
       <h2 id="result-status"></h2>
-      <p>Target Word was: <strong id="reveal-target" style="color: #2b6cb0;"></strong></p>
-      <p>Guesser Answered: <strong id="reveal-guess"></strong></p>
-      <button id="next-round-btn">Start Next Round</button>
+      <p>Target Word: <strong id="reveal-target"></strong></p>
+      <p>Submitted Guess: <strong id="reveal-guess"></strong></p>
+      <button id="next-round-btn">Next Round ➔</button>
     </div>
 
-    <!-- Lobby / Scoreboard Footer -->
-    <hr style="border:0; border-top: 1px solid #eee; margin: 15px 0;">
-    
-    <div id="lobby-list-container">
-      <h4>Players in Lobby:</h4>
-      <ul id="lobby-player-list" style="font-weight: bold;"></ul>
-      <button id="start-game-btn" style="display: none; background-color: #38a169; font-size: 1.1em;">Start Game</button>
-    </div>
-
-    <div id="scoreboard-container" style="display: none;">
-      <h4>Scoreboard</h4>
+    <!-- Scoreboard -->
+    <div id="scoreboard-container" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+      <h3>Scoreboard</h3>
       <div id="scoreboard"></div>
     </div>
   </div>
