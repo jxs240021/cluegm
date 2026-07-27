@@ -110,17 +110,15 @@ io.on('connection', (socket) => {
     let cleanName = (playerName || '').trim();
     if (!cleanName) return socket.emit('error-msg', 'Please enter a valid name.');
 
-    // --- DUPLICATE CHECK BEFORE TOUCHING ROOM STATE ---
+    // Duplicate Check
     let isNameTaken = room.players.some(
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
 
     if (isNameTaken) {
-      // Send error ONLY to the rejected socket and return early. Do NOT mutate room.
       return socket.emit('error-msg', `The name "${cleanName}" is already taken in this room. Please choose another!`);
     }
 
-    // Safely add player after passing duplicate check
     room.players.push({ id: socket.id, name: cleanName, score: 0 });
     socket.join(roomCode);
     
@@ -133,7 +131,6 @@ io.on('connection', (socket) => {
     let room = rooms[roomCode];
     if (!room) return socket.emit('error-msg', 'Room no longer exists.');
 
-    // Explicit host validation
     if (room.hostId !== socket.id) {
       return socket.emit('error-msg', 'Only the host can start the game.');
     }
@@ -153,7 +150,7 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'submitting-clues') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id === guesserId) return;
+    if (socket.id === guesserId) return; // Prevent guesser from giving clue
 
     let cleanClue = (clueText || '').trim().toUpperCase();
     if (!cleanClue) return;
@@ -208,7 +205,7 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'guessing') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id === guesserId) return;
+    if (socket.id !== guesserId) return; // FIXED: Only allow the guesser!
 
     let cleanGuess = (guessText || '').trim().toUpperCase();
     room.guess = cleanGuess;
@@ -245,7 +242,6 @@ io.on('connection', (socket) => {
         if (room.players.length === 0) {
           delete rooms[roomCode];
         } else {
-          // Reassign host to the next active player if the host left
           if (room.hostId === socket.id) {
             room.hostId = room.players[0].id;
           }
