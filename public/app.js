@@ -43,6 +43,12 @@ document.getElementById('submit-clue-btn').onclick = () => {
   clueInput.value = '';
 };
 
+document.getElementById('skip-word-btn').onclick = () => {
+  if (confirm("Are you sure you want to pick another word? Any clues submitted so far for this round will be cleared.")) {
+    socket.emit('skip-word', { roomCode: currentRoomCode });
+  }
+};
+
 document.getElementById('approve-clues-btn').onclick = () => {
   socket.emit('approve-clues', { roomCode: currentRoomCode });
 };
@@ -157,6 +163,11 @@ function renderRoom(room) {
   if (room.state === 'submitting-clues') {
     document.getElementById('submitting-clues-view').style.display = 'block';
     document.getElementById('category-badge-display').textContent = `Category: ${room.selectedCategory} (${room.selectedDifficulty})`;
+
+    const skipBtn = document.getElementById('skip-word-btn');
+    if (skipBtn) {
+      skipBtn.style.display = (me === moderator?.id) ? 'inline-block' : 'none';
+    }
 
     if (me === guesser.id) {
       document.getElementById('target-word-display').textContent = "??? (You are guessing)";
