@@ -3,98 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Just One - Party Game</title>
+  <title>Party Word Game</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; color: #2d3748; }
-    .card { background: white; border-radius: 12px; padding: 24px; max-width: 500px; margin: 0 auto 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    h1, h2, h3 { text-align: center; color: #1a202c; }
-    input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #cbd5e0; box-sizing: border-box; font-size: 16px; }
-    button { background: #3182ce; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #2b6cb0; }
-    .btn-category { background: #2b6cb0; margin-bottom: 10px; }
-    .btn-category:hover { background: #2c5282; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 14px; background: #e2e8f0; }
-    .clue-item { background: #edf2f7; padding: 10px; margin: 6px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f7fafc; margin: 0; padding: 20px; color: #2d3748; }
+    .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto 20px; }
+    .btn { background: #3182ce; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 8px; }
+    .btn:hover { background: #2b6cb0; }
+    .btn-warning { background: #dd6b20; }
+    .btn-warning:hover { background: #c05621; }
+    .btn-category { width: 100%; text-align: left; background: #edf2f7; border: 1px solid #cbd5e0; padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-category:hover { background: #e2e8f0; }
+    input[type="text"] { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; width: calc(100% - 24px); margin-bottom: 12px; }
+    .clue-item { padding: 8px 12px; background: #edf2f7; border-radius: 6px; margin-bottom: 6px; }
     .clue-item.invalid { text-decoration: line-through; opacity: 0.5; background: #fed7d7; }
-    ul { list-style: none; padding: 0; }
   </style>
 </head>
 <body>
 
-  <!-- Join / Create Screen -->
-  <div id="join-screen" class="card">
-    <h1>🎯 Just One</h1>
+  <div class="card" id="join-screen">
+    <h2>Welcome to Just One!</h2>
     <input type="text" id="player-name" placeholder="Enter Your Name">
-    <button id="create-btn">Create New Room</button>
-    <div style="text-align: center; margin: 12px 0;">— OR —</div>
-    <input type="text" id="room-input" placeholder="Enter 4-Letter Room Code">
-    <button id="join-btn">Join Room</button>
+    <div>
+      <button class="btn" id="create-btn">Create Room</button>
+    </div>
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+    <input type="text" id="room-input" placeholder="Room Code (e.g. ABCD)">
+    <button class="btn" id="join-btn">Join Room</button>
   </div>
 
-  <!-- Main Game Screen -->
-  <div id="game-screen" class="card" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <span class="badge" id="player-name-badge"></span>
-      <span class="badge" style="background:#feebc8; color:#9c4221;" id="room-code-display"></span>
+  <div class="card" id="game-screen" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3>Room Code: <span id="room-code-display"></span></h3>
+      <button class="btn" id="copy-link-btn" style="padding: 6px 12px; font-size: 12px;">📋 Copy Link</button>
     </div>
-    <h3 id="role-display" style="color: #4a5568; margin-top: 15px;"></h3>
-    <button id="copy-link-btn" style="background: #4a5568; margin-bottom: 15px;">📋 Copy Invite Link</button>
+    <p id="player-name-badge" style="font-weight: bold; color: #4a5568;"></p>
+    <p id="role-display" style="color: #718096; font-style: italic;"></p>
 
     <!-- Lobby View -->
     <div id="lobby-list-container">
-      <h3>Connected Players:</h3>
+      <h4>Players in Room:</h4>
       <ul id="lobby-player-list"></ul>
-      <button id="start-game-btn" style="display: none; background: #38a169;">🚀 Start Game</button>
+      <button class="btn" id="start-game-btn" style="display: none;">🚀 Start Game</button>
     </div>
 
-    <!-- Phase 0: Selecting Category -->
+    <!-- Phase 0: Select Category -->
     <div id="selecting-category-view" style="display: none;">
-      <h2 id="category-picker-title">Selecting Category...</h2>
-      <p id="category-instruction-text" style="text-align: center; color: #718096;"></p>
+      <h3 id="category-picker-title">Pick a Category</h3>
+      <p id="category-instruction-text"></p>
       <div id="category-buttons-container"></div>
     </div>
 
-    <!-- Phase 1: Submitting Clues -->
+    <!-- Phase 1: Submit Clues -->
     <div id="submitting-clues-view" style="display: none;">
-      <p style="text-align: center; font-size: 14px; color: #718096;" id="category-badge-display"></p>
-      <h2 id="target-word-display" style="letter-spacing: 2px;"></h2>
+      <h3 id="category-badge-display"></h3>
+      <h2 id="target-word-display" style="color: #2b6cb0;"></h2>
+      
+      <button class="btn btn-warning" id="skip-word-btn" style="display: none; margin-bottom: 12px;">🔄 Skip / Pick New Word</button>
+
       <div id="clue-input-box">
-        <input type="text" id="clue-input" placeholder="Type a ONE-WORD clue">
-        <button id="submit-clue-btn">Submit Clue</button>
+        <input type="text" id="clue-input" placeholder="Enter a single-word clue">
+        <button class="btn" id="submit-clue-btn">Submit Clue</button>
       </div>
-      <p id="waiting-clues-msg" style="text-align: center; font-style: italic; color: #718096;"></p>
+      <p id="waiting-clues-msg" style="color: #718096;"></p>
     </div>
 
-    <!-- Phase 2: Reviewing Clues -->
+    <!-- Phase 2: Review Clues (Moderator) -->
     <div id="reviewing-clues-view" style="display: none;">
-      <h2>Moderation Phase</h2>
-      <p id="mod-instruction-text" style="text-align: center; color: #718096;"></p>
+      <h3>Review Clues</h3>
+      <p id="mod-instruction-text"></p>
       <div id="moderator-clue-list"></div>
-      <button id="approve-clues-btn" style="background: #38a169; display: none;">✅ Approve & Show Guesser</button>
+      <button class="btn" id="approve-clues-btn" style="margin-top: 12px;">Send Clues to Guesser</button>
     </div>
 
-    <!-- Phase 3: Guessing Phase -->
+    <!-- Phase 3: Guessing View -->
     <div id="guessing-view" style="display: none;">
-      <h2>Guesser Phase</h2>
-      <h3>Approved Clues:</h3>
-      <ul id="guesser-clue-list"></ul>
+      <h3>Clues Revealed!</h3>
+      <ul id="guesser-clue-list" style="list-style: none; padding: 0;"></ul>
+      
       <div id="guesser-input-box">
-        <input type="text" id="guess-input" placeholder="Type your guess">
-        <button id="submit-guess-btn">Submit Final Guess</button>
+        <input type="text" id="guess-input" placeholder="Enter your final guess">
+        <button class="btn" id="submit-guess-btn">Submit Guess</button>
       </div>
     </div>
 
-    <!-- Phase 4: Round Over -->
-    <div id="round-over-view" style="display: none; text-align: center;">
+    <!-- Phase 4: Round Over View -->
+    <div id="round-over-view" style="display: none;">
       <h2 id="result-status"></h2>
       <p>Target Word: <strong id="reveal-target"></strong></p>
       <p>Submitted Guess: <strong id="reveal-guess"></strong></p>
-      <button id="next-round-btn">Next Round ➔</button>
+      <button class="btn" id="next-round-btn">Next Round ➡️</button>
     </div>
 
-    <!-- Scoreboard -->
-    <div id="scoreboard-container" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-      <h3>Scoreboard</h3>
+    <!-- Scoreboard View -->
+    <div id="scoreboard-container" style="display: none; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+      <h4>Scoreboard</h4>
       <div id="scoreboard"></div>
     </div>
   </div>
