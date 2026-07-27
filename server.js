@@ -111,7 +111,7 @@ io.on('connection', (socket) => {
     let cleanName = (playerName || '').trim();
     if (!cleanName) return socket.emit('error-msg', 'Please enter a valid name.');
 
-    // Duplicate name validation (case-insensitive)
+    // --- DUPLICATE USERNAME PREVENTION ---
     let isNameTaken = room.players.some(
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
