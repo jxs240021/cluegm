@@ -10,7 +10,6 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Categorized Word Dictionary & Shuffled Decks
 let wordDictionary = {};
 let categoryDecks = {};
 
@@ -30,30 +29,49 @@ function loadDictionary() {
   } catch (error) {
     console.error('Error reading words.json file:', error);
     wordDictionary = {
-      "General": ["APPLE", "BEACH", "CASTLE", "DRAGON", "FOREST", "PLANET", "ROCKET", "PENGUIN"]
+      "General": {
+        "Easy": ["APPLE", "BEACH", "CASTLE"],
+        "Medium": ["DRAGON", "FOREST", "PLANET"],
+        "Hard": ["ROCKET", "PENGUIN", "ASTRONAUT"]
+      }
     };
   }
 
-  // Initialize shuffled decks for each category
+  // Initialize shuffled decks per category & difficulty key ("Category|Difficulty")
   for (const cat in wordDictionary) {
-    categoryDecks[cat] = shuffleArray(wordDictionary[cat]);
+    for (const diff in wordDictionary[cat]) {
+      const key = `${cat}|${diff}`;
+      categoryDecks[key] = shuffleArray(wordDictionary[cat][diff]);
+    }
   }
 }
 
 loadDictionary();
 
-function drawNextWordFromCategory(category) {
-  if (!categoryDecks[category] || categoryDecks[category].length === 0) {
-    // Re-shuffle deck when depleted
-    categoryDecks[category] = shuffleArray(wordDictionary[category] || ["MYSTERY"]);
+function drawNextWord(category, difficulty) {
+  const key = `${category}|${difficulty}`;
+  if (!categoryDecks[key] || categoryDecks[key].length === 0) {
+    // Refresh deck when depleted
+    const pool = (wordDictionary[category] && wordDictionary[category][difficulty]) || ["MYSTERY"];
+    categoryDecks[key] = shuffleArray(pool);
   }
-  return categoryDecks[category].pop();
+  return categoryDecks[key].pop();
 }
 
-function getThreeRandomCategories() {
+function getFourRandomCategoryOptions() {
   const categories = Object.keys(wordDictionary);
-  const shuffled = shuffleArray(categories);
-  return shuffled.slice(0, 3);
+  const shuffledCats = shuffleArray(categories);
+  const selectedCats = shuffledCats.slice(0, 4);
+
+  const difficulties = ["Easy", "Medium", "Hard"];
+
+  return selectedCats.map(cat => {
+    const randomDiff = difficulties[Math.floor(Math.random() * difficulties.length)];
+    return {
+      category: cat,
+      difficulty: randomDiff
+    };
+  });
 }
 
 let rooms = {};
@@ -66,7 +84,6 @@ function serializeRoomForSocket(room, targetSocketId) {
     usedWords: Array.from(room.usedWords || [])
   };
 
-  // Strip clues from guesser during review phase
   if (room.state === 'reviewing-clues' && targetSocketId === guesser?.id) {
     roomCopy.clues = {};
   }
@@ -91,8 +108,9 @@ function broadcastRoomUpdate(roomCode) {
 
 function startCategorySelectionPhase(room, roomCode) {
   room.state = 'selecting-category';
-  room.categoryChoices = getThreeRandomCategories();
+  room.categoryChoices = getFourRandomCategoryOptions(); // Generates 4 options with difficulty tags
   room.selectedCategory = '';
+  room.selectedDifficulty = '';
   room.targetWord = '';
   room.clues = {};
   room.guess = '';
@@ -101,7 +119,6 @@ function startCategorySelectionPhase(room, roomCode) {
 
 io.on('connection', (socket) => {
 
-  // Create Room
   socket.on('create-room', ({ playerName }) => {
     let cleanName = (playerName || '').trim();
     if (!cleanName) return socket.emit('error-msg', 'Please enter a valid name.');
@@ -115,6 +132,7 @@ io.on('connection', (socket) => {
       moderatorIndex: 1,
       categoryChoices: [],
       selectedCategory: '',
+      selectedDifficulty: '',
       targetWord: '',
       clues: {},
       guess: '',
@@ -126,7 +144,6 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
-  // Join Room
   socket.on('join-room', ({ roomCode, playerName }) => {
     if (!roomCode) return socket.emit('error-msg', 'Room code is required.');
     roomCode = roomCode.toUpperCase().trim();
@@ -143,7 +160,7 @@ io.on('connection', (socket) => {
     );
 
     if (isNameTaken) {
-      return socket.emit('error-msg', `The name "${cleanName}" is already taken in this room. Please choose another!`);
+      return socket.emit('error-msg', `The name "${cleanName}" is already taken in this room.`);
     }
 
     room.players.push({ id: socket.id, name: cleanName, score: 0 });
@@ -153,7 +170,6 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
-  // Start Game
   socket.on('start-game', ({ roomCode }) => {
     let room = rooms[roomCode];
     if (!room) return socket.emit('error-msg', 'Room no longer exists.');
@@ -171,8 +187,7 @@ io.on('connection', (socket) => {
     startCategorySelectionPhase(room, roomCode);
   });
 
-  // Moderator Chooses Category
-  socket.on('select-category', ({ roomCode, category }) => {
+  socket.on('select-category', ({ roomCode, category, difficulty }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'selecting-category') return;
 
@@ -180,12 +195,12 @@ io.on('connection', (socket) => {
     if (socket.id !== moderatorId) return;
 
     room.selectedCategory = category;
-    room.targetWord = drawNextWordFromCategory(category);
+    room.selectedDifficulty = difficulty;
+    room.targetWord = drawNextWord(category, difficulty);
     room.state = 'submitting-clues';
     broadcastRoomUpdate(roomCode);
   });
 
-  // Submit Clue
   socket.on('submit-clue', ({ roomCode, clueText }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'submitting-clues') return;
@@ -213,7 +228,6 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
-  // Moderator Toggle Clue Validity
   socket.on('toggle-clue-validity', ({ roomCode, targetPlayerId }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'reviewing-clues') return;
@@ -228,7 +242,6 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
-  // Moderator Approve Clues
   socket.on('approve-clues', ({ roomCode }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'reviewing-clues') return;
@@ -240,27 +253,29 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
-  // Guesser Submit Guess
   socket.on('submit-guess', ({ roomCode, guessText }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'guessing') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id !== guesserId) return;
+    if (socket.id === guesserId) return;
 
     let cleanGuess = (guessText || '').trim().toUpperCase();
     room.guess = cleanGuess;
     let isCorrect = cleanGuess === room.targetWord;
 
     if (isCorrect) {
-      room.players.forEach(p => p.score += 1);
+      let pts = 1;
+      if (room.selectedDifficulty === 'Medium') pts = 2;
+      if (room.selectedDifficulty === 'Hard') pts = 3;
+      
+      room.players.forEach(p => p.score += pts);
     }
 
     room.state = 'round-over';
     broadcastRoomUpdate(roomCode);
   });
 
-  // Next Round
   socket.on('next-round', ({ roomCode }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'round-over') return;
@@ -271,7 +286,6 @@ io.on('connection', (socket) => {
     startCategorySelectionPhase(room, roomCode);
   });
 
-  // Handle Disconnections
   socket.on('disconnect', () => {
     for (let roomCode in rooms) {
       let room = rooms[roomCode];
