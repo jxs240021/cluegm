@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Co-Op Clue Guesser</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; text-align: center; }
+    .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-top: 15px; }
+    button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    .role-badge { font-weight: bold; color: #2b6cb0; }
+    .clue-item { margin: 8px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .invalid { text-decoration: line-through; color: red; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <h1>Co-Op Clue Guesser</h1>
+  <p id="player-name-badge"></p>
+
+  <!-- Login/Join Screen -->
+  <div id="join-screen" class="card">
+    <input type="text" id="player-name" placeholder="Your Name"><br><br>
+    <button id="create-btn">Create Room</button>
+    <br><br>
+    <input type="text" id="room-input" placeholder="Room Code">
+    <button id="join-btn">Join Room</button>
+  </div>
+
+  <!-- Game Container Screen -->
+  <div id="game-screen" class="card" style="display: none;">
+    <h3>Room Code: <span id="room-code-display"></span></h3>
+    <button id="copy-link-btn">📋 Copy Share Link</button>
+    <p id="role-display" class="role-badge"></p>
+    <hr>
+
+    <!-- Phase 1: Submitting Clues -->
+    <div id="submitting-clues-view" style="display: none;">
+      <h2 id="target-word-display" style="color: green;"></h2>
+      <div id="clue-input-box">
+        <input type="text" id="clue-input" placeholder="Enter 1-word clue">
+        <button id="submit-clue-btn">Submit Clue</button>
+      </div>
+      <p id="waiting-clues-msg">Waiting for clues from other players...</p>
+    </div>
+
+    <!-- Phase 2: Moderator Review -->
+    <div id="reviewing-clues-view" style="display: none;">
+      <h3>Moderator Review Phase</h3>
+      <p>Click a clue to mark it as Invalid/Illegal before sending to guesser.</p>
+      <div id="moderator-clue-list"></div>
+      <br>
+      <button id="approve-clues-btn" style="display: none;">Send Approved Clues to Guesser</button>
+    </div>
+
+    <!-- Phase 3: Guesser Phase -->
+    <div id="guessing-view" style="display: none;">
+      <h3>Clues Received:</h3>
+      <ul id="guesser-clue-list" style="list-style: none; padding: 0;"></ul>
+      <div id="guesser-input-box">
+        <input type="text" id="guess-input" placeholder="Enter final word guess">
+        <button id="submit-guess-btn">Submit Guess</button>
+      </div>
+    </div>
+
+    <!-- Phase 4: Round Over -->
+    <div id="round-over-view" style="display: none;">
+      <h2 id="result-status"></h2>
+      <p>Target Word: <strong id="reveal-target"></strong></p>
+      <p>Guesser Answered: <strong id="reveal-guess"></strong></p>
+      <button id="next-round-btn">Start Next Round</button>
+    </div>
+
+    <!-- Scoreboard -->
+    <hr>
+    <h4>Scoreboard</h4>
+    <div id="scoreboard"></div>
+    <button id="start-game-btn" style="display: none;">Start Game</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
