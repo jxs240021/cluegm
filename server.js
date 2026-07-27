@@ -10,30 +10,54 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Load external dictionary
-let wordDictionary = [];
-try {
-  const rawData = fs.readFileSync(path.join(__dirname, 'words.json'), 'utf-8');
-  wordDictionary = JSON.parse(rawData);
-} catch (error) {
-  console.error('Error reading words.json file:', error);
-  wordDictionary = ["APPLE", "BEACH", "CASTLE", "DRAGON", "FOREST", "PLANET"];
+// Categorized Word Dictionary & Shuffled Decks
+let wordDictionary = {};
+let categoryDecks = {};
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function loadDictionary() {
+  try {
+    const rawData = fs.readFileSync(path.join(__dirname, 'words.json'), 'utf-8');
+    wordDictionary = JSON.parse(rawData);
+  } catch (error) {
+    console.error('Error reading words.json file:', error);
+    wordDictionary = {
+      "General": ["APPLE", "BEACH", "CASTLE", "DRAGON", "FOREST", "PLANET", "ROCKET", "PENGUIN"]
+    };
+  }
+
+  // Initialize shuffled decks for each category
+  for (const cat in wordDictionary) {
+    categoryDecks[cat] = shuffleArray(wordDictionary[cat]);
+  }
+}
+
+loadDictionary();
+
+function drawNextWordFromCategory(category) {
+  if (!categoryDecks[category] || categoryDecks[category].length === 0) {
+    // Re-shuffle deck when depleted
+    categoryDecks[category] = shuffleArray(wordDictionary[category] || ["MYSTERY"]);
+  }
+  return categoryDecks[category].pop();
+}
+
+function getThreeRandomCategories() {
+  const categories = Object.keys(wordDictionary);
+  const shuffled = shuffleArray(categories);
+  return shuffled.slice(0, 3);
 }
 
 let rooms = {};
 
-function getRandomWord(usedWordsSet) {
-  let available = wordDictionary.filter(w => !usedWordsSet.has(w));
-  if (available.length === 0) {
-    usedWordsSet.clear();
-    available = wordDictionary;
-  }
-  let word = available[Math.floor(Math.random() * available.length)];
-  usedWordsSet.add(word);
-  return word;
-}
-
-// Tailors the room object per-player (masks clues from Guesser during review phase)
 function serializeRoomForSocket(room, targetSocketId) {
   const guesser = room.players[room.guesserIndex];
   
@@ -42,6 +66,7 @@ function serializeRoomForSocket(room, targetSocketId) {
     usedWords: Array.from(room.usedWords || [])
   };
 
+  // Strip clues from guesser during review phase
   if (room.state === 'reviewing-clues' && targetSocketId === guesser?.id) {
     roomCopy.clues = {};
   }
@@ -49,7 +74,6 @@ function serializeRoomForSocket(room, targetSocketId) {
   return roomCopy;
 }
 
-// Sends individualized room data to each connected socket in the room
 function broadcastRoomUpdate(roomCode) {
   let room = rooms[roomCode];
   if (!room) return;
@@ -65,9 +89,11 @@ function broadcastRoomUpdate(roomCode) {
   }
 }
 
-function startNewRound(room, roomCode) {
-  room.state = 'submitting-clues';
-  room.targetWord = getRandomWord(room.usedWords);
+function startCategorySelectionPhase(room, roomCode) {
+  room.state = 'selecting-category';
+  room.categoryChoices = getThreeRandomCategories();
+  room.selectedCategory = '';
+  room.targetWord = '';
   room.clues = {};
   room.guess = '';
   broadcastRoomUpdate(roomCode);
@@ -87,6 +113,8 @@ io.on('connection', (socket) => {
       state: 'lobby',
       guesserIndex: 0,
       moderatorIndex: 1,
+      categoryChoices: [],
+      selectedCategory: '',
       targetWord: '',
       clues: {},
       guess: '',
@@ -110,7 +138,6 @@ io.on('connection', (socket) => {
     let cleanName = (playerName || '').trim();
     if (!cleanName) return socket.emit('error-msg', 'Please enter a valid name.');
 
-    // Duplicate Check
     let isNameTaken = room.players.some(
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
@@ -141,7 +168,21 @@ io.on('connection', (socket) => {
 
     room.guesserIndex = 0;
     room.moderatorIndex = 1 % room.players.length;
-    startNewRound(room, roomCode);
+    startCategorySelectionPhase(room, roomCode);
+  });
+
+  // Moderator Chooses Category
+  socket.on('select-category', ({ roomCode, category }) => {
+    let room = rooms[roomCode];
+    if (!room || room.state !== 'selecting-category') return;
+
+    let moderatorId = room.players[room.moderatorIndex].id;
+    if (socket.id !== moderatorId) return;
+
+    room.selectedCategory = category;
+    room.targetWord = drawNextWordFromCategory(category);
+    room.state = 'submitting-clues';
+    broadcastRoomUpdate(roomCode);
   });
 
   // Submit Clue
@@ -150,7 +191,7 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'submitting-clues') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id === guesserId) return; // Prevent guesser from giving clue
+    if (socket.id === guesserId) return;
 
     let cleanClue = (clueText || '').trim().toUpperCase();
     if (!cleanClue) return;
@@ -205,7 +246,7 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'guessing') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id !== guesserId) return; // FIXED: Only allow the guesser!
+    if (socket.id !== guesserId) return;
 
     let cleanGuess = (guessText || '').trim().toUpperCase();
     room.guess = cleanGuess;
@@ -227,7 +268,7 @@ io.on('connection', (socket) => {
     room.guesserIndex = (room.guesserIndex + 1) % room.players.length;
     room.moderatorIndex = (room.guesserIndex + 1) % room.players.length;
 
-    startNewRound(room, roomCode);
+    startCategorySelectionPhase(room, roomCode);
   });
 
   // Handle Disconnections
