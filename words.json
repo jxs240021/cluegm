@@ -121,7 +121,7 @@
       "VIKING", "WRESTLER", "ZOO KEEPER"
     ]
   },
-  "Pop Culture & Fictional": [
+  "Pop Culture & Fictional": {
     "Easy": [
       "ALIEN", "BATMAN", "DRAGON", "FAIRY", "GHOST", "MONSTER", "SANTA CLAUS", "SPIDERMAN", "SUPERMAN", "UNICORN",
       "VAMPIRE", "WITCH", "ZOMBIE"
@@ -135,7 +135,7 @@
       "PEGASUS"
     ]
   },
-  "Actions & Concepts": [
+  "Actions & Concepts": {
     "Easy": [
       "CAMPING", "DANCING", "FISHING", "FLYING", "HIKING", "JUMPING", "RUNNING", "SINGING", "SLEEPING", "SWIMMING"
     ],
