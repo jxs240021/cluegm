@@ -37,7 +37,6 @@ function loadDictionary() {
     };
   }
 
-  // Initialize shuffled decks per category & difficulty key ("Category|Difficulty")
   for (const cat in wordDictionary) {
     for (const diff in wordDictionary[cat]) {
       const key = `${cat}|${diff}`;
@@ -51,7 +50,6 @@ loadDictionary();
 function drawNextWord(category, difficulty) {
   const key = `${category}|${difficulty}`;
   if (!categoryDecks[key] || categoryDecks[key].length === 0) {
-    // Refresh deck when depleted
     const pool = (wordDictionary[category] && wordDictionary[category][difficulty]) || ["MYSTERY"];
     categoryDecks[key] = shuffleArray(pool);
   }
@@ -108,7 +106,7 @@ function broadcastRoomUpdate(roomCode) {
 
 function startCategorySelectionPhase(room, roomCode) {
   room.state = 'selecting-category';
-  room.categoryChoices = getFourRandomCategoryOptions(); // Generates 4 options with difficulty tags
+  room.categoryChoices = getFourRandomCategoryOptions();
   room.selectedCategory = '';
   room.selectedDifficulty = '';
   room.targetWord = '';
@@ -201,6 +199,20 @@ io.on('connection', (socket) => {
     broadcastRoomUpdate(roomCode);
   });
 
+  // Moderator Skip Word Handler
+  socket.on('skip-word', ({ roomCode }) => {
+    let room = rooms[roomCode];
+    if (!room || room.state !== 'submitting-clues') return;
+
+    let moderatorId = room.players[room.moderatorIndex].id;
+    if (socket.id !== moderatorId) return;
+
+    // Draw a new word in same category & difficulty
+    room.targetWord = drawNextWord(room.selectedCategory, room.selectedDifficulty);
+    room.clues = {}; // Reset any clues submitted for the old word
+    broadcastRoomUpdate(roomCode);
+  });
+
   socket.on('submit-clue', ({ roomCode, clueText }) => {
     let room = rooms[roomCode];
     if (!room || room.state !== 'submitting-clues') return;
@@ -258,7 +270,7 @@ io.on('connection', (socket) => {
     if (!room || room.state !== 'guessing') return;
 
     let guesserId = room.players[room.guesserIndex].id;
-    if (socket.id === guesserId) return;
+    if (socket.id !== guesserId) return;
 
     let cleanGuess = (guessText || '').trim().toUpperCase();
     room.guess = cleanGuess;
