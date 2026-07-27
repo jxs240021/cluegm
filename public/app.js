@@ -69,11 +69,22 @@ socket.on('room-joined', ({ roomCode, isHost, room }) => {
   if (isHost) document.getElementById('start-game-btn').style.display = 'inline-block';
 });
 
-socket.on('error-msg', (msg) => alert(msg));
 
-socket.on('update-room', (room) => {
-  renderRoom(room);
+socket.on('error-msg', (msg) => {
+  alert(msg);
+  // Focus back on the name field so the user can quickly type a new name
+  const nameInput = document.getElementById('player-name');
+  if (nameInput) {
+    nameInput.focus();
+    nameInput.select();
+  }
 });
+
+// socket.on('error-msg', (msg) => alert(msg));
+// 
+// socket.on('update-room', (room) => {
+//   renderRoom(room);
+// });
 
 function renderRoom(room) {
   const me = socket.id;
