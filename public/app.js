@@ -2,7 +2,6 @@ const socket = io();
 let currentRoomCode = '';
 let myPlayerName = '';
 
-// Pre-fill room code from URL parameters
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room');
@@ -87,7 +86,6 @@ function renderRoom(room) {
   const guesser = room.players[room.guesserIndex];
   const moderator = room.players[room.moderatorIndex];
 
-  // 1. LOBBY VS IN-GAME DISPLAY
   const lobbyContainer = document.getElementById('lobby-list-container');
   const scoreboardContainer = document.getElementById('scoreboard-container');
   const startBtn = document.getElementById('start-game-btn');
@@ -96,42 +94,61 @@ function renderRoom(room) {
     lobbyContainer.style.display = 'block';
     scoreboardContainer.style.display = 'none';
 
-    // Render connected player list
     const lobbyUl = document.getElementById('lobby-player-list');
     lobbyUl.innerHTML = room.players
       .map(p => `<li>👤 ${p.name} ${p.id === room.hostId ? '<span style="color:#d69e2e;">👑 (Host)</span>' : ''}</li>`)
       .join('');
 
     document.getElementById('role-display').textContent = 'Waiting for Host to start...';
-
-    // Ensure start button visibility strictly matches host socket ID
-    if (me === room.hostId) {
-      startBtn.style.display = 'inline-block';
-    } else {
-      startBtn.style.display = 'none';
-    }
+    startBtn.style.display = (me === room.hostId) ? 'inline-block' : 'none';
   } else {
     lobbyContainer.style.display = 'none';
     scoreboardContainer.style.display = 'block';
     startBtn.style.display = 'none';
 
-    // Role Badge Text
     let myRole = "Clue Provider";
     if (me === guesser?.id) myRole = "Solution Guesser";
     if (me === moderator?.id) myRole = "Moderator & Clue Provider";
     document.getElementById('role-display').textContent = `Your Role: ${myRole}`;
   }
 
-  // Hide all gameplay panels
+  // Hide all panels
+  document.getElementById('selecting-category-view').style.display = 'none';
   document.getElementById('submitting-clues-view').style.display = 'none';
   document.getElementById('reviewing-clues-view').style.display = 'none';
   document.getElementById('guessing-view').style.display = 'none';
   document.getElementById('round-over-view').style.display = 'none';
 
+  // Phase 0: Category Selection
+  if (room.state === 'selecting-category') {
+    document.getElementById('selecting-category-view').style.display = 'block';
+    const container = document.getElementById('category-buttons-container');
+    container.innerHTML = '';
+
+    const isModerator = me === moderator?.id;
+
+    if (isModerator) {
+      document.getElementById('category-picker-title').textContent = "Pick a Category for this Round!";
+      document.getElementById('category-instruction-text').textContent = "As Moderator, choose one of the 3 randomly generated options:";
+      
+      room.categoryChoices.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-category';
+        btn.textContent = `📁 ${cat}`;
+        btn.onclick = () => socket.emit('select-category', { roomCode: currentRoomCode, category: cat });
+        container.appendChild(btn);
+      });
+    } else {
+      document.getElementById('category-picker-title').textContent = "Moderator is Choosing Category...";
+      document.getElementById('category-instruction-text').textContent = `${moderator?.name || 'Moderator'} is picking between 3 category choices.`;
+    }
+  }
+
   // Phase 1: Submitting Clues
   if (room.state === 'submitting-clues') {
     document.getElementById('submitting-clues-view').style.display = 'block';
-    
+    document.getElementById('category-badge-display').textContent = `Category: ${room.selectedCategory}`;
+
     if (me === guesser.id) {
       document.getElementById('target-word-display').textContent = "??? (You are guessing)";
       document.getElementById('clue-input-box').style.display = 'none';
@@ -215,7 +232,7 @@ function renderRoom(room) {
     document.getElementById('reveal-guess').textContent = room.guess || "(No Guess)";
   }
 
-  // Update Scoreboard
+  // Scoreboard
   const scoreDiv = document.getElementById('scoreboard');
   if (scoreDiv) {
     scoreDiv.innerHTML = room.players
