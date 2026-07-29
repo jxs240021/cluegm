@@ -5,99 +5,317 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Party Word Game</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f7fafc; margin: 0; padding: 20px; color: #2d3748; }
-    .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto 20px; }
-    .btn { background: #3182ce; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 8px; }
-    .btn:hover { background: #2b6cb0; }
-    .btn-warning { background: #dd6b20; }
-    .btn-warning:hover { background: #c05621; }
-    .btn-category { width: 100%; text-align: left; background: #edf2f7; border: 1px solid #cbd5e0; padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    .btn-category:hover { background: #e2e8f0; }
-    input[type="text"] { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; width: calc(100% - 24px); margin-bottom: 12px; }
-    .clue-item { padding: 8px 12px; background: #edf2f7; border-radius: 6px; margin-bottom: 6px; }
-    .clue-item.invalid { text-decoration: line-through; opacity: 0.5; background: #fed7d7; }
+    /* Modern, Performance-Optimized CSS System */
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --warning: #ea580c;
+      --warning-hover: #c2410c;
+      --border-color: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px 16px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 28px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      max-width: 580px;
+      width: 100%;
+      margin: 0 auto;
+      transition: all 0.2s ease-in-out;
+    }
+
+    h2, h3, h4 { margin-top: 0; color: var(--text-main); letter-spacing: -0.02em; }
+    h2 { font-size: 1.6rem; margin-bottom: 16px; }
+    h3 { font-size: 1.25rem; }
+
+    /* Buttons with Inline Icon Alignment */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: var(--success-hover); }
+
+    .btn-warning { background: var(--warning); }
+    .btn-warning:hover { background: var(--warning-hover); }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border-color);
+    }
+    .btn-secondary:hover { background: #e2e8f0; color: #0f172a; }
+
+    .btn-category {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-category:hover {
+      background: #ffffff;
+      border-color: var(--primary);
+      transform: translateX(2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Inputs */
+    input[type="text"] {
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 8px;
+      width: 100%;
+      font-size: 1rem;
+      margin-bottom: 14px;
+      outline: none;
+      transition: all 0.15s ease;
+      background: #f8fafc;
+    }
+
+    input[type="text"]:focus {
+      background: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Target Word Banner */
+    .target-banner {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .target-word {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #1e40af;
+      letter-spacing: 0.05em;
+      margin: 4px 0 0;
+    }
+
+    /* Lists & Clues */
+    ul { padding-left: 0; list-style: none; margin: 0; }
+
+    .clue-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .clue-item.invalid {
+      text-decoration: line-through;
+      opacity: 0.55;
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    /* SVG Icon Helpers */
+    .icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Scoreboard */
+    .scoreboard-card {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--border-color);
+    }
+    .score-row:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
 
+  <!-- JOIN / CREATE SCREEN -->
   <div class="card" id="join-screen">
-    <h2>Welcome to the Game!</h2>
+    <h2>🎮 Welcome to Just One!</h2>
     <input type="text" id="player-name" placeholder="Enter Your Name">
     <div>
-      <button class="btn" id="create-btn">Create Room</button>
+      <button class="btn" id="create-btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Create Room
+      </button>
     </div>
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border-color);">
     <input type="text" id="room-input" placeholder="Room Code (e.g. ABCD)">
-    <button class="btn" id="join-btn">Join Room</button>
+    <button class="btn btn-secondary" id="join-btn">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13 12H3"/></svg>
+      Join Room
+    </button>
   </div>
 
+  <!-- MAIN GAME SCREEN -->
   <div class="card" id="game-screen" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <h3>Room Code: <span id="room-code-display"></span></h3>
-      <button class="btn" id="copy-link-btn" style="padding: 6px 12px; font-size: 12px;">📋 Copy Link</button>
+      <h3 style="margin:0;">Room Code: <span id="room-code-display" style="color:var(--primary); font-family:monospace;"></span></h3>
+      <button class="btn btn-secondary" id="copy-link-btn" style="padding: 6px 12px; font-size: 0.85rem;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        Copy Link
+      </button>
     </div>
-    <p id="player-name-badge" style="font-weight: bold; color: #4a5568;"></p>
-    <p id="role-display" style="color: #718096; font-style: italic;"></p>
+
+    <p id="player-name-badge" style="font-weight: 600; color: #334155; margin-bottom: 4px;"></p>
+    <p id="role-display" style="color: var(--text-muted); font-style: italic; font-size: 0.9rem; margin-top: 0;"></p>
 
     <!-- Lobby View -->
     <div id="lobby-list-container">
       <h4>Players in Room:</h4>
       <ul id="lobby-player-list"></ul>
-      <button class="btn" id="start-game-btn" style="display: none;">🚀 Start Game</button>
+      <button class="btn btn-success" id="start-game-btn" style="display: none; margin-top: 16px;">
+        <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start Game
+      </button>
     </div>
 
     <!-- Phase 0: Select Category -->
     <div id="selecting-category-view" style="display: none;">
       <h3 id="category-picker-title">Pick a Category</h3>
-      <p id="category-instruction-text"></p>
+      <p id="category-instruction-text" style="color: var(--text-muted);"></p>
       <div id="category-buttons-container"></div>
     </div>
 
     <!-- Phase 1: Submit Clues -->
     <div id="submitting-clues-view" style="display: none;">
-      <h3 id="category-badge-display"></h3>
-      <h2 id="target-word-display" style="color: #2b6cb0;"></h2>
+      <div class="target-banner">
+        <span id="category-badge-display" style="font-size:0.85rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);"></span>
+        <div class="target-word" id="target-word-display"></div>
+      </div>
       
-      <button class="btn btn-warning" id="skip-word-btn" style="display: none; margin-bottom: 12px;">🔄 Skip / Pick New Word</button>
+      <button class="btn btn-warning" id="skip-word-btn" style="display: none; margin-bottom: 16px;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Skip / Pick New Word
+      </button>
 
       <div id="clue-input-box">
         <input type="text" id="clue-input" placeholder="Enter a single-word clue">
-        <button class="btn" id="submit-clue-btn">Submit Clue</button>
+        <button class="btn" id="submit-clue-btn">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Submit Clue
+        </button>
       </div>
-      <p id="waiting-clues-msg" style="color: #718096;"></p>
+      <p id="waiting-clues-msg" style="color: var(--text-muted); font-style: italic;"></p>
     </div>
 
     <!-- Phase 2: Review Clues (Moderator) -->
     <div id="reviewing-clues-view" style="display: none;">
       <h3>Review Clues</h3>
-      <p id="mod-instruction-text"></p>
+      <p id="mod-instruction-text" style="color: var(--text-muted);"></p>
       <div id="moderator-clue-list"></div>
-      <button class="btn" id="approve-clues-btn" style="margin-top: 12px;">Send Clues to Guesser</button>
+      <button class="btn btn-success" id="approve-clues-btn" style="margin-top: 16px;">
+        <svg class="icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Send Clues to Guesser
+      </button>
     </div>
 
     <!-- Phase 3: Guessing View -->
     <div id="guessing-view" style="display: none;">
       <h3>Clues Revealed!</h3>
-      <ul id="guesser-clue-list" style="list-style: none; padding: 0;"></ul>
+      <ul id="guesser-clue-list"></ul>
       
-      <div id="guesser-input-box">
+      <div id="guesser-input-box" style="margin-top: 16px;">
         <input type="text" id="guess-input" placeholder="Enter your final guess">
-        <button class="btn" id="submit-guess-btn">Submit Guess</button>
+        <button class="btn btn-success" id="submit-guess-btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Submit Guess
+        </button>
       </div>
     </div>
 
     <!-- Phase 4: Round Over View -->
-    <div id="round-over-view" style="display: none;">
+    <div id="round-over-view" style="display: none; text-align: center;">
       <h2 id="result-status"></h2>
-      <p>Target Word: <strong id="reveal-target"></strong></p>
-      <p>Submitted Guess: <strong id="reveal-guess"></strong></p>
-      <button class="btn" id="next-round-btn">Next Round ➡️</button>
+      <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+        <p style="margin: 4px 0;">Target Word: <strong id="reveal-target" style="color: var(--primary);"></strong></p>
+        <p style="margin: 4px 0;">Submitted Guess: <strong id="reveal-guess"></strong></p>
+      </div>
+      <button class="btn" id="next-round-btn">
+        Next Round
+        <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
     </div>
 
     <!-- Scoreboard View -->
-    <div id="scoreboard-container" style="display: none; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-      <h4>Scoreboard</h4>
-      <div id="scoreboard"></div>
+    <div id="scoreboard-container" style="display: none; margin-top: 28px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+      <h4 style="margin-bottom: 8px;">🏆 Scoreboard</h4>
+      <div id="scoreboard" class="scoreboard-card"></div>
     </div>
   </div>
 
